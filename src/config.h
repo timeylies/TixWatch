@@ -25,3 +25,4 @@
 #include <Wire.h>
 #include <axp20x.h>
 #include "focaltech.h"
+#include <lvgl.h>

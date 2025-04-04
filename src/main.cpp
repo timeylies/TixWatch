@@ -1,34 +1,24 @@
 #include "config.h"
 #include "hardware.h"
 
-void setup() {
+void setup()
+{
   Serial.begin(115200);
-  //run the hardware setup first here
+  // run the hardware setup first here
   hardware_init();
-  tft->fillScreen(TFT_BLACK);
-  tft->drawRect(0, 0, tft->width(), tft->height(), TFT_GREEN);
+  lvgl_init();
 
-  // Set "cursor" at top left corner of display (0,0) and select font 4
-  tft->setCursor(0, 4, 4);
+  lv_obj_t *btn1 = lv_button_create(lv_screen_active());
+  lv_obj_align(btn1, LV_ALIGN_CENTER, 0, 0);
+  lv_obj_remove_flag(btn1, LV_OBJ_FLAG_PRESS_LOCK);
 
-  // Set the font colour to be white with a black background
-  tft->setTextColor(TFT_WHITE);
-
-  // We can now plot text on screen using the "print" class
-  tft->println(" Initialised default\n");
-  tft->println(" White text");
-  
-  tft->setTextColor(TFT_RED);
-  tft->println(" Red text");
-  
-  tft->setTextColor(TFT_GREEN);
-  tft->println(" Green text");
-  
-  tft->setTextColor(TFT_BLUE);
-  tft->println(" Blue text");
+  lv_obj_t *label = lv_label_create(btn1);
+  lv_label_set_text(label, "Button");
+  lv_obj_center(label);
 }
 
-void loop() {
- 
+void loop()
+{
+  lv_timer_handler(); /* let the GUI do its work */
+  delay(5);           /* let this time pass */
 }
-
