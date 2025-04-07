@@ -11,28 +11,17 @@ FocalTech_Class *touch;
 TwoWire ti2c = TwoWire(1);
 
 void init_touchpad(){
-    ti2c.begin(FT6336_SDA, FT6336_SCL);
+    ti2c.begin(FT6336_SDA, FT6336_SCL, 100000);
     touch = new FocalTech_Class;
     if(!touch->begin(ti2c)){
-        Serial.println("Uh oh, no touchpad found?");
+        log_w("Uh oh, no touchpad found?");
+    } else {
+        log_i("Found touchpad!");
     }
 }
 
 void hardware_touchpad_read( lv_indev_t * indev, lv_indev_data_t * data )
 {
-    /*For example  ("my_..." functions needs to be implemented by you)
-    int32_t x, y;
-    bool touched = my_get_touch( &x, &y );
-
-    if(!touched) {
-        data->state = LV_INDEV_STATE_RELEASED;
-    } else {
-        data->state = LV_INDEV_STATE_PRESSED;
-
-        data->point.x = x;
-        data->point.y = y;
-    }
-     */
     uint16_t x, y;
     bool touched = touch->getTouched();
     touch->getPoint(x, y);
@@ -44,7 +33,7 @@ void hardware_touchpad_read( lv_indev_t * indev, lv_indev_data_t * data )
 
         data->point.x = x;
         data->point.y = y;
-        Serial.printf("X: %i, Y: %i", x, y);
+        log_i("X: %i, Y: %i", x, y);
     }
 }
 
@@ -59,7 +48,7 @@ void init_power()
     {
         while (1)
         {
-            Serial.println("AXP Power begin failed!");
+            log_e("AXP Power begin failed!");
             delay(1000);
         }
     }

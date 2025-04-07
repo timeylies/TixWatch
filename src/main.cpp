@@ -1,12 +1,19 @@
 #include "config.h"
 #include "hardware.h"
 
+static uint32_t my_tick(void)
+{
+    return millis();
+}
+
+
 void setup()
 {
-  Serial.begin(115200);
   // run the hardware setup first here
   hardware_init();
   lvgl_init();
+
+  lv_tick_set_cb(my_tick);
 
   lv_obj_t *btn1 = lv_button_create(lv_screen_active());
   lv_obj_align(btn1, LV_ALIGN_CENTER, 0, 0);

@@ -20,6 +20,7 @@
 #define IR_BLASTER 13
 
 /* Libraries */
+#include "esp32-hal-log.h"
 #include <SPI.h>
 #include <TFT_eSPI.h>
 #include <Wire.h>
