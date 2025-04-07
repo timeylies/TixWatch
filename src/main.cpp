@@ -3,9 +3,24 @@
 
 static uint32_t my_tick(void)
 {
-    return millis();
+  return millis();
 }
 
+static void event_handler(lv_event_t *e)
+{
+  lv_event_code_t code = lv_event_get_code(e);
+
+  if (code == LV_EVENT_CLICKED)
+  {
+    // show message box
+    lv_obj_t *mbox = lv_msgbox_create(NULL);
+    lv_obj_set_width(mbox, TFT_WIDTH - 10);
+    lv_msgbox_add_text(mbox, "Apps isn't implemented yet");
+    lv_msgbox_add_close_button(mbox);
+  }
+}
+
+bool irq = false;
 
 void setup()
 {
@@ -15,17 +30,29 @@ void setup()
 
   lv_tick_set_cb(my_tick);
 
-  lv_obj_t *btn1 = lv_button_create(lv_screen_active());
-  lv_obj_align(btn1, LV_ALIGN_CENTER, 0, 0);
-  lv_obj_remove_flag(btn1, LV_OBJ_FLAG_PRESS_LOCK);
+  setup_homeScreen();
+  lv_obj_add_event_cb(homeScreen_appsButton, event_handler, LV_EVENT_ALL, NULL);
 
-  lv_obj_t *label = lv_label_create(btn1);
-  lv_label_set_text(label, "Button");
-  lv_obj_center(label);
+  attachInterrupt(AXP202_INTERUPT, []
+                  { irq = true; }, FALLING);
 }
 
 void loop()
 {
   lv_timer_handler(); /* let the GUI do its work */
   delay(5);           /* let this time pass */
+  if (irq)
+  {
+    irq = false;
+    power->readIRQ();
+    if (power->isPEKShortPressIRQ())
+    {
+      // show message box
+      lv_obj_t *mbox = lv_msgbox_create(NULL);
+      lv_obj_set_width(mbox, TFT_WIDTH - 10);
+      lv_msgbox_add_text(mbox, "Power button pressed");
+      lv_msgbox_add_close_button(mbox);
+    }
+    power->clearIRQ();
+  }
 }

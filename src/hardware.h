@@ -31,8 +31,10 @@ void hardware_touchpad_read( lv_indev_t * indev, lv_indev_data_t * data )
     } else {
         data->state = LV_INDEV_STATE_PRESSED;
 
-        data->point.x = x;
-        data->point.y = y;
+        //data->point.x = x;
+        //data->point.y = y;
+        data->point.x = map(x, 0, 240, 240, 0);
+        data->point.y = map(y, 0, 240, 240, 0);
         log_i("X: %i, Y: %i", x, y);
     }
 }
@@ -61,6 +63,11 @@ void init_power()
     power->setPowerOutPut(AXP202_LDO3, false);
     // turn on lcd backlight
     power->setPowerOutPut(AXP202_LDO2, AXP202_ON);
+
+    //do some IRQ Stuff for checking button and usb and stuff
+    pinMode(AXP202_INTERUPT, INPUT_PULLUP);
+    power->enableIRQ(AXP202_PEK_SHORTPRESS_IRQ, true);
+    power->clearIRQ();
 }
 
 /* Init hardware */
