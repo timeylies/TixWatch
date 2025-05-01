@@ -1,6 +1,10 @@
 #include "config.h"
 #include "hardware.h"
 
+//to shut the errors up
+#define TFT_WIDTH  240
+#define TFT_HEIGHT 240
+
 static uint32_t my_tick(void)
 {
   return millis();

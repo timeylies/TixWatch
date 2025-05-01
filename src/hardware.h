@@ -1,5 +1,9 @@
 // Screen stuff
 
+//to shut the errors up
+#define TFT_WIDTH  240
+#define TFT_HEIGHT 240
+
 TFT_eSPI *tft = nullptr;
 #define DRAW_BUF_SIZE (TFT_WIDTH * TFT_HEIGHT / 10 * (LV_COLOR_DEPTH / 8))
 uint32_t draw_buf[DRAW_BUF_SIZE / 4];
@@ -78,7 +82,6 @@ void hardware_init()
     pinMode(TFT_BACKLIGHT, OUTPUT);
     tft = new TFT_eSPI();
     tft->init();
-    digitalWrite(TFT_BACKLIGHT, 1);
     // start up everything else like the sensors
     init_touchpad();
 
@@ -95,4 +98,7 @@ void lvgl_init()
     lv_indev_t * indev = lv_indev_create();
     lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER); /*Touchpad should have POINTER type*/
     lv_indev_set_read_cb(indev, hardware_touchpad_read);
+    
+    //once this is done THEN turn on the backlight
+    digitalWrite(TFT_BACKLIGHT, 1);
 }
