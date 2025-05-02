@@ -7,7 +7,7 @@
 
 static uint32_t my_tick(void)
 {
-  return millis();
+  return millis(); 
 }
 
 static void event_handler(lv_event_t *e)
@@ -45,6 +45,7 @@ void loop()
 {
   lv_timer_handler(); /* let the GUI do its work */
   delay(5);           /* let this time pass */
+  run_audio();
   if (irq)
   {
     irq = false;

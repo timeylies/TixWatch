@@ -1,45 +1,53 @@
 // Screen stuff
 
-//to shut the errors up
-#define TFT_WIDTH  240
+// to shut the errors up
+#define TFT_WIDTH 240
 #define TFT_HEIGHT 240
 
 TFT_eSPI *tft = nullptr;
 #define DRAW_BUF_SIZE (TFT_WIDTH * TFT_HEIGHT / 10 * (LV_COLOR_DEPTH / 8))
 uint32_t draw_buf[DRAW_BUF_SIZE / 4];
-#define TFT_ROTATION  LV_DISPLAY_ROTATION_180
+#define TFT_ROTATION LV_DISPLAY_ROTATION_180
 
-//Touch stuff
+// Touch stuff
 
 FocalTech_Class *touch;
 TwoWire ti2c = TwoWire(1);
 
-void init_touchpad(){
+void init_touchpad()
+{
     ti2c.begin(FT6336_SDA, FT6336_SCL, 100000);
     touch = new FocalTech_Class;
-    if(!touch->begin(ti2c)){
+    if (!touch->begin(ti2c))
+    {
         log_w("Uh oh, no touchpad found?");
-    } else {
+    }
+    else
+    {
         log_i("Found touchpad!");
     }
 }
 
-void hardware_touchpad_read( lv_indev_t * indev, lv_indev_data_t * data )
+void hardware_touchpad_read(lv_indev_t *indev, lv_indev_data_t *data)
 {
     uint16_t x, y;
     bool touched = touch->getTouched();
     touch->getPoint(x, y);
 
-    if(!touched) {
+    if (!touched)
+    {
         data->state = LV_INDEV_STATE_RELEASED;
-    } else {
+    }
+    else
+    {
         data->state = LV_INDEV_STATE_PRESSED;
 
-        //data->point.x = x;
-        //data->point.y = y;
+        // data->point.x = x;
+        // data->point.y = y;
+        // flipped so:
         data->point.x = map(x, 0, 240, 240, 0);
         data->point.y = map(y, 0, 240, 240, 0);
-        log_i("X: %i, Y: %i", x, y);
+        // log_i("X: %i, Y: %i", x, y);
     }
 }
 
@@ -68,10 +76,52 @@ void init_power()
     // turn on lcd backlight
     power->setPowerOutPut(AXP202_LDO2, AXP202_ON);
 
-    //do some IRQ Stuff for checking button and usb and stuff
+    // do some IRQ Stuff for checking button and usb and stuff
     pinMode(AXP202_INTERUPT, INPUT_PULLUP);
     power->enableIRQ(AXP202_PEK_SHORTPRESS_IRQ, true);
     power->clearIRQ();
+}
+
+// Audio stuff
+I2SStream i2s;
+MemoryStream mp3(plug, sizeof(plug));
+MP3DecoderHelix helix;
+EncodedAudioStream out(&i2s, &helix);
+StreamCopy copier(out, mp3);
+
+void init_audio()
+{
+    // config it
+    auto config = i2s.defaultConfig(TX_MODE);
+    config.pin_ws = I2C_WS;
+    config.pin_bck = I2C_BCK;
+    config.pin_data = I2C_DOUT;
+    config.sample_rate = 48000;
+    config.channels = 2;
+
+    // turn on the amp
+    power->setPowerOutPut(AXP202_LDO4, true);
+
+    // start
+    i2s.begin(config);
+    out.begin();
+}
+
+void run_audio()
+{
+    if (mp3.available())
+    {
+        copier.copy();
+    }
+    else
+    {
+        helix.end(); // flush output
+        auto info = out.decoder().audioInfo();
+        log_i("The audio rate from the mp3 file is %d", info.sample_rate);
+        log_i("The channels from the mp3 file is %d", info.channels);
+        i2s.end();
+        stop();
+    }
 }
 
 /* Init hardware */
@@ -84,7 +134,7 @@ void hardware_init()
     tft->init();
     // start up everything else like the sensors
     init_touchpad();
-
+    init_audio();
 }
 
 /* Init LVGL */
@@ -95,10 +145,10 @@ void lvgl_init()
     disp = lv_tft_espi_create(TFT_HEIGHT, TFT_WIDTH, draw_buf, sizeof(draw_buf));
     lv_display_set_rotation(disp, TFT_ROTATION);
 
-    lv_indev_t * indev = lv_indev_create();
+    lv_indev_t *indev = lv_indev_create();
     lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER); /*Touchpad should have POINTER type*/
     lv_indev_set_read_cb(indev, hardware_touchpad_read);
-    
-    //once this is done THEN turn on the backlight
+
+    // once this is done THEN turn on the backlight
     digitalWrite(TFT_BACKLIGHT, 1);
 }
