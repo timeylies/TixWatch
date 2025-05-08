@@ -43,15 +43,16 @@ void setup()
 
 void loop()
 {
-  lv_timer_handler(); /* let the GUI do its work */
-  delay(5);           /* let this time pass */
-  run_audio();
+  lv_timer_handler();
+  delay(5);
   if (irq)
   {
     irq = false;
     power->readIRQ();
     if (power->isPEKShortPressIRQ())
     {
+      //play audio
+      xTaskCreate(play_pluh, "play pluh", 5000, NULL, 1, NULL);
       // show message box
       lv_obj_t *mbox = lv_msgbox_create(NULL);
       lv_obj_set_width(mbox, TFT_WIDTH - 10);

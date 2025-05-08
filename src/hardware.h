@@ -83,11 +83,29 @@ void init_power()
 }
 
 // Audio stuff
+AudioInfo info(48000, 2, 16);
 I2SStream i2s;
-MemoryStream mp3(plug, sizeof(plug));
-MP3DecoderHelix helix;
-EncodedAudioStream out(&i2s, &helix);
-StreamCopy copier(out, mp3);
+InputMixer<int16_t> mixer;
+//MemoryStream stream(plug, sizeof(plug));
+StreamCopy copier(i2s, mixer);
+
+void play_pluh(void *parameters)
+{
+    //initalize stuff
+    MemoryStream stream(plug, sizeof(plug));
+    mixer.add(stream);
+    for(;;){
+        //run copier here
+        if(stream.available()){
+            copier.copy();
+        } else {
+            stream.end();
+            log_i("Pluh stream done, mixer size %i", mixer.size());
+            vTaskDelete(NULL);
+        }
+        vTaskDelay(5);
+    }
+}
 
 void init_audio()
 {
@@ -103,26 +121,15 @@ void init_audio()
     power->setPowerOutPut(AXP202_LDO4, true);
 
     // start
-    i2s.begin(config);
-    out.begin();
+    i2s.begin(config); 
+    mixer.begin(info);
+
+    //run the thingy
+    xTaskCreate(play_pluh, "play pluh", 5000, NULL, 1, NULL);
 }
 
-void run_audio()
-{
-    if (mp3.available())
-    {
-        copier.copy();
-    }
-    else
-    {
-        helix.end(); // flush output
-        auto info = out.decoder().audioInfo();
-        log_i("The audio rate from the mp3 file is %d", info.sample_rate);
-        log_i("The channels from the mp3 file is %d", info.channels);
-        i2s.end();
-        stop();
-    }
-}
+
+
 
 /* Init hardware */
 void hardware_init()
