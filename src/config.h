@@ -29,5 +29,4 @@
 #include <lvgl.h>
 #include "lvgl_screens.h"
 #include "AudioTools.h"
-#include "AudioTools/AudioCodecs/CodecVorbis.h"
 #include "plug.h" //pluh

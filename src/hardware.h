@@ -83,29 +83,8 @@ void init_power()
 }
 
 // Audio stuff
-AudioInfo info(48000, 2, 16);
 I2SStream i2s;
-InputMixer<int16_t> mixer;
-//MemoryStream stream(plug, sizeof(plug));
-StreamCopy copier(i2s, mixer);
 
-void play_pluh(void *parameters)
-{
-    //initalize stuff
-    MemoryStream stream(plug, sizeof(plug));
-    mixer.add(stream);
-    for(;;){
-        //run copier here
-        if(stream.available()){
-            copier.copy();
-        } else {
-            stream.end();
-            log_i("Pluh stream done, mixer size %i", mixer.size());
-            vTaskDelete(NULL);
-        }
-        vTaskDelay(5);
-    }
-}
 
 void init_audio()
 {
@@ -115,21 +94,14 @@ void init_audio()
     config.pin_bck = I2C_BCK;
     config.pin_data = I2C_DOUT;
     config.sample_rate = 48000;
-    config.channels = 2;
+    config.channels = 1;
 
     // turn on the amp
     power->setPowerOutPut(AXP202_LDO4, true);
 
     // start
-    i2s.begin(config); 
-    mixer.begin(info);
-
-    //run the thingy
-    xTaskCreate(play_pluh, "play pluh", 5000, NULL, 1, NULL);
+    i2s.begin(config);
 }
-
-
-
 
 /* Init hardware */
 void hardware_init()

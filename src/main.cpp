@@ -1,13 +1,13 @@
 #include "config.h"
 #include "hardware.h"
 
-//to shut the errors up
-#define TFT_WIDTH  240
+// to shut the errors up
+#define TFT_WIDTH 240
 #define TFT_HEIGHT 240
 
 static uint32_t my_tick(void)
 {
-  return millis(); 
+  return millis();
 }
 
 static void event_handler(lv_event_t *e)
@@ -28,6 +28,9 @@ bool irq = false;
 
 void setup()
 {
+  Serial.begin(115200);
+  AudioLogger::instance().begin(Serial, AudioLogger::Info);
+
   // run the hardware setup first here
   hardware_init();
   lvgl_init();
@@ -51,13 +54,11 @@ void loop()
     power->readIRQ();
     if (power->isPEKShortPressIRQ())
     {
-      //play audio
-      xTaskCreate(play_pluh, "play pluh", 5000, NULL, 1, NULL);
       // show message box
-      lv_obj_t *mbox = lv_msgbox_create(NULL);
-      lv_obj_set_width(mbox, TFT_WIDTH - 10);
-      lv_msgbox_add_text(mbox, "Power button pressed");
-      lv_msgbox_add_close_button(mbox);
+      // lv_obj_t *mbox = lv_msgbox_create(NULL);
+      // lv_obj_set_width(mbox, TFT_WIDTH - 10);
+      // lv_msgbox_add_text(mbox, "Power button pressed");
+      // lv_msgbox_add_close_button(mbox);
     }
     power->clearIRQ();
   }
