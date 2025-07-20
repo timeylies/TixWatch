@@ -51,6 +51,11 @@ void hardware_touchpad_read(lv_indev_t *indev, lv_indev_data_t *data)
     }
 }
 
+static uint32_t lvgl_tick(void)
+{
+    return millis();
+}
+
 // AXP stuff
 AXP20X_Class *power;
 void init_power()
@@ -80,11 +85,39 @@ void init_power()
     pinMode(AXP202_INTERUPT, INPUT_PULLUP);
     power->enableIRQ(AXP202_PEK_SHORTPRESS_IRQ, true);
     power->clearIRQ();
+    //for monitoring
+    power->adc1Enable(
+        AXP202_VBUS_VOL_ADC1 |
+        AXP202_VBUS_CUR_ADC1 |
+        AXP202_BATT_CUR_ADC1 |
+        AXP202_BATT_VOL_ADC1,
+        true);
+}
+
+// RTC Stuff
+RTC_PCF8563 rtc;
+
+void init_rtc()
+{
+    if (!rtc.begin())
+    {
+        log_w("Couldn't find RTC!");
+        return;
+    } else {
+        log_i("Found RTC!");
+    }
+    if (rtc.lostPower())
+    {
+        log_i("RTC is NOT initialized, setting the time to compilation time...");
+        // When time needs to be set on a new device, or after a power loss, the
+        // following line sets the RTC to the date & time this sketch was compiled
+        rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    }
+    rtc.start();
 }
 
 // Audio stuff
 I2SStream i2s;
-
 
 void init_audio()
 {
@@ -113,7 +146,8 @@ void hardware_init()
     tft->init();
     // start up everything else like the sensors
     init_touchpad();
-    init_audio();
+    init_rtc();
+    // init_audio();
 }
 
 /* Init LVGL */
@@ -127,6 +161,8 @@ void lvgl_init()
     lv_indev_t *indev = lv_indev_create();
     lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER); /*Touchpad should have POINTER type*/
     lv_indev_set_read_cb(indev, hardware_touchpad_read);
+
+    lv_tick_set_cb(lvgl_tick);
 
     // once this is done THEN turn on the backlight
     digitalWrite(TFT_BACKLIGHT, 1);

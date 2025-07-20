@@ -26,6 +26,7 @@
 #include <Wire.h>
 #include <axp20x.h>
 #include "focaltech.h"
+#include "RTClib.h"
 #include <lvgl.h>
 #include "lvgl_screens.h"
 #include "AudioTools.h"

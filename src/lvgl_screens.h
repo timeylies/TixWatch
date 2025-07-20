@@ -1,15 +1,37 @@
 //#include <lvgl.h>
 // lvgl screens
 
+// to shut the errors up
+#define TFT_WIDTH 240
+#define TFT_HEIGHT 240
+
+lv_obj_t *topBar_batteryIcon;
+lv_obj_t *topBar_batteryText;
+
+void setup_topBar(){
+    lv_obj_t *topBar = lv_obj_create(lv_screen_active());
+    lv_obj_align(topBar, LV_ALIGN_TOP_MID, 0, 5);
+    lv_obj_set_size(topBar, TFT_WIDTH - 5, 30);
+    lv_obj_clear_flag(topBar, LV_OBJ_FLAG_SCROLLABLE);
+    
+    topBar_batteryIcon = lv_label_create(topBar);
+    lv_obj_align(topBar_batteryIcon, LV_ALIGN_RIGHT_MID, 0, 0);
+    lv_label_set_text(topBar_batteryIcon, LV_SYMBOL_BATTERY_FULL);
+
+    topBar_batteryText = lv_label_create(topBar);
+    lv_label_set_text(topBar_batteryText, "100%");
+    lv_obj_set_style_text_font(topBar_batteryText, &lv_font_montserrat_16, 0);
+    lv_obj_align_to(topBar_batteryText, topBar_batteryIcon, LV_ALIGN_OUT_LEFT_MID, -5, 0);
+}
+
+
 lv_obj_t *homeScreen_timeText;
 lv_obj_t *homeScreen_dateText;
 lv_obj_t *homeScreen_appsButton;
 
 void setup_homeScreen()
 {
-    lv_obj_t *homeScreen_topBar = lv_obj_create(lv_screen_active());
-    lv_obj_align(homeScreen_topBar, LV_ALIGN_TOP_MID, 0, 5);
-    lv_obj_set_size(homeScreen_topBar, TFT_WIDTH - 5, 30);
+    setup_topBar();
 
     homeScreen_timeText = lv_label_create(lv_screen_active());
     lv_label_set_text(homeScreen_timeText, "12:00 AM");
@@ -24,6 +46,7 @@ void setup_homeScreen()
     homeScreen_appsButton = lv_btn_create(lv_screen_active());
     lv_obj_align(homeScreen_appsButton, LV_ALIGN_BOTTOM_MID, 0, -10);
     lv_obj_set_size(homeScreen_appsButton, 80, 40);
+    lv_obj_set_ext_click_area(homeScreen_appsButton, 10); //helps on such a small screen
 
     lv_obj_t *homeScreen_appsButtonText = lv_label_create(homeScreen_appsButton);
     lv_label_set_text(homeScreen_appsButtonText, "Apps");
