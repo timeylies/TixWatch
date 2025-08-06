@@ -35,6 +35,30 @@ void setup_topBar(){
  
 }
 
+void update_topBarBatteryStatus(bool usbPluggedIn, int batPercent){
+  if(usbPluggedIn){
+    lv_label_set_text(topBar_batteryIcon, LV_SYMBOL_CHARGE);
+  } else {
+    int lvl = batPercent;
+    if(lvl > 85 && lvl < 100){
+      lv_label_set_text(topBar_batteryIcon, LV_SYMBOL_BATTERY_FULL);
+    }
+    if(lvl > 75 && lvl < 85){
+      lv_label_set_text(topBar_batteryIcon, LV_SYMBOL_BATTERY_3);
+    }
+    if(lvl > 50 && lvl < 75){
+      lv_label_set_text(topBar_batteryIcon, LV_SYMBOL_BATTERY_2);
+    }
+    if(lvl > 25 && lvl < 50){
+      lv_label_set_text(topBar_batteryIcon, LV_SYMBOL_BATTERY_1);
+    }
+    if(lvl >= 0 && lvl < 25){
+      lv_label_set_text(topBar_batteryIcon, LV_SYMBOL_BATTERY_EMPTY);
+    }
+  }
+  lv_label_set_text_fmt(topBar_batteryText, "%i%%", batPercent);
+}
+
 
 lv_obj_t *homeScreen_timeText;
 lv_obj_t *homeScreen_dateText;
