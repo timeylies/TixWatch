@@ -7,21 +7,32 @@
 
 lv_obj_t *topBar_batteryIcon;
 lv_obj_t *topBar_batteryText;
+lv_obj_t *topBar_wifiIcon;
+lv_obj_t *topBar_soundIcon;
 
 void setup_topBar(){
     lv_obj_t *topBar = lv_obj_create(lv_screen_active());
     lv_obj_align(topBar, LV_ALIGN_TOP_MID, 0, 5);
     lv_obj_set_size(topBar, TFT_WIDTH - 5, 30);
     lv_obj_clear_flag(topBar, LV_OBJ_FLAG_SCROLLABLE);
-    
+    lv_obj_set_layout(topBar, LV_LAYOUT_FLEX);
+    lv_obj_set_style_base_dir(topBar, LV_BASE_DIR_RTL, 0);
+    lv_obj_set_flex_flow(topBar, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(topBar, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
     topBar_batteryIcon = lv_label_create(topBar);
-    lv_obj_align(topBar_batteryIcon, LV_ALIGN_RIGHT_MID, 0, 0);
-    lv_label_set_text(topBar_batteryIcon, LV_SYMBOL_BATTERY_FULL);
+    lv_label_set_text(topBar_batteryIcon, LV_SYMBOL_BATTERY_EMPTY);
 
     topBar_batteryText = lv_label_create(topBar);
-    lv_label_set_text(topBar_batteryText, "100%");
+    lv_label_set_text(topBar_batteryText, "0%");
     lv_obj_set_style_text_font(topBar_batteryText, &lv_font_montserrat_16, 0);
-    lv_obj_align_to(topBar_batteryText, topBar_batteryIcon, LV_ALIGN_OUT_LEFT_MID, -5, 0);
+
+    topBar_wifiIcon = lv_label_create(topBar);
+    lv_label_set_text(topBar_wifiIcon, LV_SYMBOL_WIFI);
+
+    topBar_soundIcon = lv_label_create(topBar);
+    lv_label_set_text(topBar_soundIcon, LV_SYMBOL_VOLUME_MAX);
+ 
 }
 
 

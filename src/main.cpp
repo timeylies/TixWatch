@@ -53,7 +53,7 @@ void update_topBar(){
     }
   }
   lv_label_set_text_fmt(topBar_batteryText, "%i%%", power->getBattPercentage());
-  lv_obj_align_to(topBar_batteryText, topBar_batteryIcon, LV_ALIGN_OUT_LEFT_MID, -5, 0);
+  //lv_obj_align_to(topBar_batteryText, topBar_batteryIcon, LV_ALIGN_OUT_LEFT_MID, -5, 0);
 }
 
 void setup()
