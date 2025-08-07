@@ -5,13 +5,14 @@
 #define TFT_WIDTH 240
 #define TFT_HEIGHT 240
 
+lv_obj_t *topBar;
 lv_obj_t *topBar_batteryIcon;
 lv_obj_t *topBar_batteryText;
 lv_obj_t *topBar_wifiIcon;
 lv_obj_t *topBar_soundIcon;
 
 void setup_topBar(){
-    lv_obj_t *topBar = lv_obj_create(lv_screen_active());
+    topBar = lv_obj_create(lv_screen_active());
     lv_obj_align(topBar, LV_ALIGN_TOP_MID, 0, 5);
     lv_obj_set_size(topBar, TFT_WIDTH - 5, 30);
     lv_obj_clear_flag(topBar, LV_OBJ_FLAG_SCROLLABLE);
@@ -87,4 +88,19 @@ void setup_homeScreen()
     lv_label_set_text(homeScreen_appsButtonText, "Apps");
     lv_obj_set_style_text_font(homeScreen_appsButtonText, &lv_font_montserrat_18, 0);
     lv_obj_align(homeScreen_appsButtonText, LV_ALIGN_CENTER, 0, 0);
+}
+
+void update_homeScreen(DateTime now){
+  //update time and date 
+  if(now.hour() > 12){
+    lv_label_set_text_fmt(homeScreen_timeText, "%i:%02i PM", now.hour() - 12, now.minute());
+  } else {
+    if(now.hour() == 0){
+      lv_label_set_text_fmt(homeScreen_timeText, "%i:%02i AM", 12, now.minute());
+    } else {
+    lv_label_set_text_fmt(homeScreen_timeText, "%i:%02i AM", now.hour(), now.minute());
+    }
+  }
+  lv_label_set_text_fmt(homeScreen_dateText, "%i-%i-%i", now.month(), now.day(), now.year());
+  //log_i("Updated Home Screen");
 }

@@ -28,6 +28,8 @@ void init_touchpad()
     }
 }
 
+// LVGL Stuff
+
 void hardware_touchpad_read(lv_indev_t *indev, lv_indev_data_t *data)
 {
     uint16_t x, y;
@@ -54,6 +56,28 @@ void hardware_touchpad_read(lv_indev_t *indev, lv_indev_data_t *data)
 static uint32_t lvgl_tick(void)
 {
     return millis();
+}
+
+void lvgl_log_cb(lv_log_level_t level, const char *buf)
+{
+    switch (level)
+    {
+    case LV_LOG_LEVEL_TRACE:
+        log_v("%s", buf);
+        break;
+    case LV_LOG_LEVEL_INFO:
+        log_i("%s", buf);
+        break;
+    case LV_LOG_LEVEL_WARN:
+        log_w("%s", buf);
+        break;
+    case LV_LOG_LEVEL_ERROR:
+        log_e("%s", buf);
+        break;
+    case LV_LOG_LEVEL_USER:
+        log_i("%s", buf);
+        break;
+    }
 }
 
 // AXP stuff
@@ -85,12 +109,12 @@ void init_power()
     pinMode(AXP202_INTERUPT, INPUT_PULLUP);
     power->enableIRQ(AXP202_PEK_SHORTPRESS_IRQ, true);
     power->clearIRQ();
-    //for monitoring
+    // for monitoring
     power->adc1Enable(
         AXP202_VBUS_VOL_ADC1 |
-        AXP202_VBUS_CUR_ADC1 |
-        AXP202_BATT_CUR_ADC1 |
-        AXP202_BATT_VOL_ADC1,
+            AXP202_VBUS_CUR_ADC1 |
+            AXP202_BATT_CUR_ADC1 |
+            AXP202_BATT_VOL_ADC1,
         true);
 }
 
@@ -103,7 +127,9 @@ void init_rtc()
     {
         log_w("Couldn't find RTC!");
         return;
-    } else {
+    }
+    else
+    {
         log_i("Found RTC!");
     }
     if (rtc.lostPower())
@@ -163,6 +189,8 @@ void lvgl_init()
     lv_indev_set_read_cb(indev, hardware_touchpad_read);
 
     lv_tick_set_cb(lvgl_tick);
+
+    lv_log_register_print_cb(lvgl_log_cb);
 
     // once this is done THEN turn on the backlight
     digitalWrite(TFT_BACKLIGHT, 1);
