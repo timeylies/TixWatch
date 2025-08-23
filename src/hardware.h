@@ -174,6 +174,7 @@ void hardware_init()
     init_touchpad();
     init_rtc();
     // init_audio();
+    AudioLogger::instance().begin(Serial, AudioLogger::Info);
 }
 
 /* Init LVGL */

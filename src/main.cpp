@@ -8,7 +8,6 @@
 void setup()
 {
   Serial.begin(115200);
-  AudioLogger::instance().begin(Serial, AudioLogger::Info);
 
   // run the hardware setup first here
   hardware_init();
@@ -16,7 +15,7 @@ void setup()
 
   setup_homeScreen();
   update_homeScreen(rtc.now());
-  //TODO: Work on this
+  // TODO: Work on this
   lv_obj_add_event_cb(homeScreen_appsButton, [](lv_event_t *e)
                       {
                         lv_event_code_t code = lv_event_get_code(e);
@@ -28,12 +27,16 @@ void setup()
                           lv_obj_set_size(mbox, TFT_WIDTH - 10, 80);
                           lv_msgbox_add_text(mbox, "Apps isn't implemented yet");
                           lv_msgbox_add_close_button(mbox);
-                        } 
-                      },
-                      LV_EVENT_ALL, NULL);
+                        } }, LV_EVENT_ALL, NULL);
 
   /* attachInterrupt(AXP202_INTERUPT, []
                   { irq = true; }, FALLING); */
+
+  setup_controlPanel();
+  lv_obj_set_y(controlPanel, -lv_obj_get_height(controlPanel));
+
+  lv_obj_add_event_cb(topBar, topBar_swipe_cb, LV_EVENT_GESTURE, NULL);
+  lv_obj_add_event_cb(controlPanel_closeButton, controlPanel_close_cb, LV_EVENT_CLICKED, NULL);
 }
 
 // bool irq = false;
