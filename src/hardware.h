@@ -141,7 +141,7 @@ void init_rtc()
     }
     rtc.start();
 }
-
+/* Make sure the library https://github.com/pschatzmann/arduino-audio-tools.git is in the ini
 // Audio stuff
 I2SStream i2s;
 
@@ -161,6 +161,7 @@ void init_audio()
     // start
     i2s.begin(config);
 }
+*/
 
 /* Init hardware */
 void hardware_init()
@@ -174,7 +175,6 @@ void hardware_init()
     init_touchpad();
     init_rtc();
     // init_audio();
-    AudioLogger::instance().begin(Serial, AudioLogger::Info);
 }
 
 /* Init LVGL */
