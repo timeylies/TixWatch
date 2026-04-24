@@ -20,7 +20,8 @@
 #define IR_BLASTER 13
 
 /* Libraries */
-#include "esp32-hal-log.h"
+//#include "esp32-hal-log.h"
+#include <WiFi.h>
 #include <SPI.h>
 #include <TFT_eSPI.h>
 #include <Wire.h>
@@ -28,6 +29,17 @@
 #include "focaltech.h"
 #include "RTClib.h"
 #include <lvgl.h>
+void UI_set_wifi_enabled(bool enabled);
+void UI_set_sound_enabled(bool enabled) { LV_LOG_USER("Ui change"); }
+void UI_change_brightness(int brightness) { LV_LOG_USER("Ui change"); }
+void UI_set_display_timeout(int seconds) { LV_LOG_USER("Ui change"); }
+void UI_change_volume(int volume) { LV_LOG_USER("Ui change"); }
+void UI_start_wifi_scan() { LV_LOG_USER("Ui change"); }
+void UI_set_time(int hour, int minute) { LV_LOG_USER("Ui change"); }
+void UI_set_date(int year, int month, int day) { LV_LOG_USER("Ui change"); }
+void UI_sync_time_and_date_from_ntp() { LV_LOG_USER("Ui change"); }
+void UI_check_for_software_updates() { LV_LOG_USER("Ui change"); }
+void UI_start_software_update() { LV_LOG_USER("Ui change"); }
 #include "lvgl_screens.h"
 //#include "AudioTools.h"
 

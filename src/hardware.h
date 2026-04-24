@@ -6,7 +6,7 @@
 
 TFT_eSPI *tft = nullptr;
 #define DRAW_BUF_SIZE (TFT_WIDTH * TFT_HEIGHT / 10 * (LV_COLOR_DEPTH / 8))
-uint32_t draw_buf[DRAW_BUF_SIZE / 4];
+uint32_t draw_buf[DRAW_BUF_SIZE / 2];
 #define TFT_ROTATION LV_DISPLAY_ROTATION_180
 
 // Touch stuff
@@ -20,11 +20,11 @@ void init_touchpad()
     touch = new FocalTech_Class;
     if (!touch->begin(ti2c))
     {
-        log_w("Uh oh, no touchpad found?");
+        ESP_LOGW("Init Touchpad", "Uh oh, no touchpad found?");
     }
     else
     {
-        log_i("Found touchpad!");
+        ESP_LOGI("Init Touchpad", "Found touchpad!");
     }
 }
 
@@ -35,6 +35,12 @@ void hardware_touchpad_read(lv_indev_t *indev, lv_indev_data_t *data)
     uint16_t x, y;
     bool touched = touch->getTouched();
     touch->getPoint(x, y);
+    if(x > 240 || x < 0){
+        return;
+    }
+    if(y > 240 || y < 0){
+        return;
+    }
 
     if (!touched)
     {
@@ -63,19 +69,19 @@ void lvgl_log_cb(lv_log_level_t level, const char *buf)
     switch (level)
     {
     case LV_LOG_LEVEL_TRACE:
-        log_v("%s", buf);
+        ESP_LOGV("LVGL", "%s", buf);
         break;
     case LV_LOG_LEVEL_INFO:
-        log_i("%s", buf);
+        ESP_LOGI("LVGL", "%s", buf);
         break;
     case LV_LOG_LEVEL_WARN:
-        log_w("%s", buf);
+        ESP_LOGW("LVGL", "%s", buf);
         break;
     case LV_LOG_LEVEL_ERROR:
-        log_e("%s", buf);
+        ESP_LOGE("LVGL", "%s", buf);
         break;
     case LV_LOG_LEVEL_USER:
-        log_i("%s", buf);
+        ESP_LOGI("LVGL", "%s", buf);
         break;
     }
 }
@@ -91,7 +97,7 @@ void init_power()
     {
         while (1)
         {
-            log_e("AXP Power begin failed!");
+            ESP_LOGE("Init Power", "AXP Power begin failed!");
             delay(1000);
         }
     }
@@ -125,16 +131,16 @@ void init_rtc()
 {
     if (!rtc.begin())
     {
-        log_w("Couldn't find RTC!");
+        ESP_LOGW("Init RTC", "Couldn't find RTC!");
         return;
     }
     else
     {
-        log_i("Found RTC!");
+        ESP_LOGI("Init RTC", "Found RTC!");
     }
     if (rtc.lostPower())
     {
-        log_i("RTC is NOT initialized, setting the time to compilation time...");
+        ESP_LOGI("Init RTC", "RTC is NOT initialized, setting the time to compilation time...");
         // When time needs to be set on a new device, or after a power loss, the
         // following line sets the RTC to the date & time this sketch was compiled
         rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
