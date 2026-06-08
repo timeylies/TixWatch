@@ -1,6 +1,9 @@
 #pragma once
 #include <lvgl.h>
 #include <iostream>
+#include <cstring>
+#include <freertos/FreeRTOS.h>
+#include <freertos/portmacro.h>
 
 // to shut the errors up
 #define TFT_WIDTH 240
@@ -61,13 +64,27 @@ void setup_topBar(lv_obj_t* screen) {
 void update_topBarBatteryStatus(bool usbPluggedIn, int batPercent) {
     if (usbPluggedIn) {
         lv_label_set_text(topBar_batteryIcon, LV_SYMBOL_CHARGE);
-    } else {
-        // Static const array stays in Flash (no RAM usage)
-        static const char* icons[] = {LV_SYMBOL_BATTERY_EMPTY, LV_SYMBOL_BATTERY_1, LV_SYMBOL_BATTERY_2, LV_SYMBOL_BATTERY_3, LV_SYMBOL_BATTERY_FULL};
-        int idx = (batPercent < 25) ? 0 : (batPercent < 50) ? 1 : (batPercent < 75) ? 2 : (batPercent < 85) ? 3 : 4;
-        lv_label_set_text(topBar_batteryIcon, icons[idx]);
+    }
+    else {
+        int lvl = batPercent;
+        if (lvl > 85 && lvl < 100) {
+            lv_label_set_text(topBar_batteryIcon, LV_SYMBOL_BATTERY_FULL);
+        }
+        if (lvl > 75 && lvl < 85) {
+            lv_label_set_text(topBar_batteryIcon, LV_SYMBOL_BATTERY_3);
+        }
+        if (lvl > 50 && lvl < 75) {
+            lv_label_set_text(topBar_batteryIcon, LV_SYMBOL_BATTERY_2);
+        }
+        if (lvl > 25 && lvl < 50) {
+            lv_label_set_text(topBar_batteryIcon, LV_SYMBOL_BATTERY_1);
+        }
+        if (lvl >= 0 && lvl < 25) {
+            lv_label_set_text(topBar_batteryIcon, LV_SYMBOL_BATTERY_EMPTY);
+        }
     }
     lv_label_set_text_fmt(topBar_batteryText, "%i%%", batPercent);
+
 }
 
 lv_obj_t* controlPanel;
@@ -130,6 +147,7 @@ void setup_controlPanel(lv_obj_t* screen) {
     lv_obj_align_to(controlPanel_brightnessSlider, controlPanel_brightnessSliderIcon, LV_ALIGN_OUT_RIGHT_MID, 15, 1);
     lv_obj_set_size(controlPanel_brightnessSlider, LV_PCT(80), 10);
     lv_obj_add_event_cb(controlPanel_brightnessSlider, controlPanel_brightnessSlider_event_handler, LV_EVENT_VALUE_CHANGED, NULL);
+    lv_slider_set_value(controlPanel_brightnessSlider, 100, LV_ANIM_OFF); //since the screen starts at max brightness, set the slider to max as well
 
     lv_obj_t* controlPanel_volumeSliderIcon = lv_label_create(controlPanel);
     lv_label_set_text(controlPanel_volumeSliderIcon, LV_SYMBOL_VOLUME_MAX);
@@ -623,6 +641,7 @@ void setup_settings() {
     lv_menu_separator_create(sub_display_page);
     section = lv_menu_section_create(sub_display_page);
     settings_display_brightness_slider = create_slider(section, LV_SYMBOL_IMAGE, "Brightness", 0, 100, 100);
+    lv_slider_set_value(settings_display_brightness_slider, 100, LV_ANIM_OFF); //since the screen starts at max brightness, set the slider to max as well
     lv_obj_add_event_cb(settings_display_brightness_slider, settings_display_brightness_slider_event_handler, LV_EVENT_VALUE_CHANGED, NULL);
 
     lv_menu_separator_create(sub_display_page);
@@ -1056,13 +1075,27 @@ void setup_screens() {
     setup_AllApps();
 }
 
-lv_obj_t* background;
-lv_anim_t animation_template; //for scrolling the toast text
-lv_style_t label_style;
+/*
+lv_obj_t* toast_background;
+lv_anim_t toast_animation_template; //for scrolling the toast text
+lv_style_t toast_label_style;
+
+lv_timer_t* toast_timer;
+
+void toast_timer_cb(lv_timer_t* timer)
+{
+    if (lv_obj_is_valid(toast_background)) {
+        lv_obj_delete(toast_background);
+    }
+    lv_timer_delete(toast_timer);
+}
 
 void show_toast(const char* text, uint32_t duration) {
-    if (lv_obj_is_valid(background)) {
-        lv_obj_delete(background);
+    if (lv_obj_is_valid(toast_background)) {
+        lv_obj_delete(toast_background);
+    }
+    if (toast_timer != NULL) {
+        lv_timer_pause(toast_timer);
     }
 
     static lv_style_t style;
@@ -1070,19 +1103,19 @@ void show_toast(const char* text, uint32_t duration) {
 
     lv_style_set_bg_opa(&style, LV_OPA_70);
 
-    background = lv_obj_create(lv_layer_top());
-    lv_obj_null_on_delete(&background);
-    lv_obj_add_style(background, &style, 0);
-    lv_obj_set_size(background, LV_PCT(90), LV_SIZE_CONTENT);
-    lv_obj_clear_flag(background, LV_OBJ_FLAG_SCROLL_CHAIN_VER);
-    lv_obj_move_to_index(background, lv_obj_get_index(background) - 1);
-    lv_obj_update_layout(background);
-    lv_obj_align(background, LV_ALIGN_BOTTOM_MID, 0, -20);
-    lv_obj_add_event_cb(background, [](lv_event_t* e) {
+    toast_background = lv_obj_create(lv_layer_top());
+    lv_obj_null_on_delete(&toast_background);
+    lv_obj_add_style(toast_background, &style, 0);
+    lv_obj_set_size(toast_background, LV_PCT(90), LV_SIZE_CONTENT);
+    lv_obj_clear_flag(toast_background, LV_OBJ_FLAG_SCROLL_CHAIN_VER);
+    lv_obj_move_to_index(toast_background, lv_obj_get_index(toast_background) - 1);
+    lv_obj_update_layout(toast_background);
+    lv_obj_align(toast_background, LV_ALIGN_BOTTOM_MID, 0, -20);
+    lv_obj_add_event_cb(toast_background, [](lv_event_t* e) {
         lv_anim_t a;
         lv_anim_init(&a);
-        lv_anim_set_var(&a, background);
-        lv_anim_set_values(&a, -20, 20 + lv_obj_get_height(background));
+        lv_anim_set_var(&a, toast_background);
+        lv_anim_set_values(&a, -20, 20 + lv_obj_get_height(toast_background));
         lv_anim_set_duration(&a, 200);
         lv_anim_set_exec_cb(&a, anim_y_cb);
         lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
@@ -1092,19 +1125,19 @@ void show_toast(const char* text, uint32_t duration) {
                 lv_obj_del(obj);
             });
         lv_anim_start(&a);
-        }, LV_EVENT_CLICKED, background);
+        }, LV_EVENT_CLICKED, toast_background);
 
 
 
-    lv_anim_init(&animation_template);
-    lv_anim_set_duration(&animation_template, 500);
-    lv_anim_set_delay(&animation_template, 500);           /*Wait 1 second to start the first scroll*/
-    lv_anim_set_repeat_delay(&animation_template, 1000);
-    lv_anim_set_completed_cb(&animation_template, [](lv_anim_t* t) {
+    lv_anim_init(&toast_animation_template);
+    lv_anim_set_duration(&toast_animation_template, 500);
+    lv_anim_set_delay(&toast_animation_template, 500);           //Wait 1 second to start the first scroll
+    lv_anim_set_repeat_delay(&toast_animation_template, 1000);
+    lv_anim_set_completed_cb(&toast_animation_template, [](lv_anim_t* t) {
         lv_anim_t a;
         lv_anim_init(&a);
-        lv_anim_set_var(&a, background);
-        lv_anim_set_values(&a, -20, 20 + lv_obj_get_height(background));
+        lv_anim_set_var(&a, toast_background);
+        lv_anim_set_values(&a, -20, 20 + lv_obj_get_height(toast_background));
         lv_anim_set_duration(&a, 200);
         lv_anim_set_exec_cb(&a, anim_y_cb);
         lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
@@ -1116,27 +1149,189 @@ void show_toast(const char* text, uint32_t duration) {
         lv_anim_start(&a);
         });
 
-    /*Initialize the label style with the animation template*/
-    lv_style_init(&label_style);
-    lv_style_set_anim(&label_style, &animation_template);
+    //Initialize the label style with the animation template
+    lv_style_init(&toast_label_style);
+    lv_style_set_anim(&toast_label_style, &toast_animation_template);
 
-    lv_obj_t* toast = lv_label_create(background);
+    lv_obj_t* toast = lv_label_create(toast_background);
     lv_obj_set_width(toast, LV_PCT(100));
     lv_label_set_long_mode(toast, LV_LABEL_LONG_MODE_SCROLL_CIRCULAR);
     lv_label_set_text(toast, text);
     lv_obj_set_style_text_font(toast, &lv_font_montserrat_14, 0);
-    lv_obj_add_style(toast, &label_style, LV_STATE_DEFAULT);
+    lv_obj_add_style(toast, &toast_label_style, LV_STATE_DEFAULT);
     lv_obj_center(toast);
 
-    lv_obj_set_y(background, 20 + lv_obj_get_height(background));
+    lv_obj_set_y(toast_background, 20 + lv_obj_get_height(toast_background));
     lv_anim_t a;
     lv_anim_init(&a);
-    lv_anim_set_var(&a, background);
-    lv_anim_set_values(&a, 20 + lv_obj_get_height(background), -20);
+    lv_anim_set_var(&a, toast_background);
+    lv_anim_set_values(&a, 20 + lv_obj_get_height(toast_background), -20);
     lv_anim_set_duration(&a, 300);
     lv_anim_set_exec_cb(&a, anim_y_cb);
     lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
     lv_anim_start(&a);
+
+    toast_timer = lv_timer_create(toast_timer_cb, duration, NULL);
+}
+*/
+
+lv_obj_t * toast_background = NULL;
+lv_timer_t* toast_timer = NULL;
+lv_style_t toast_bg_style;
+lv_style_t toast_label_style;
+bool toast_styles_initialized = false;
+
+struct ToastMessage {
+    char text[128];
+    uint32_t duration;
+};
+
+static const size_t TOAST_QUEUE_SIZE = 6;
+static ToastMessage toastQueue[TOAST_QUEUE_SIZE];
+static volatile size_t toastQueueHead = 0;
+static volatile size_t toastQueueTail = 0;
+static volatile size_t toastQueueCount = 0;
+static portMUX_TYPE toastQueueMux = portMUX_INITIALIZER_UNLOCKED;
+static bool toast_displaying = false;
+
+static void enqueue_toast_internal(const char* text, uint32_t duration) {
+    portENTER_CRITICAL(&toastQueueMux);
+    if (toastQueueCount >= TOAST_QUEUE_SIZE) {
+        toastQueueHead = (toastQueueHead + 1) % TOAST_QUEUE_SIZE;
+        toastQueueCount--;
+    }
+    strncpy(toastQueue[toastQueueTail].text, text, sizeof(toastQueue[toastQueueTail].text) - 1);
+    toastQueue[toastQueueTail].text[sizeof(toastQueue[toastQueueTail].text) - 1] = '\0';
+    toastQueue[toastQueueTail].duration = duration;
+    toastQueueTail = (toastQueueTail + 1) % TOAST_QUEUE_SIZE;
+    toastQueueCount++;
+    portEXIT_CRITICAL(&toastQueueMux);
+}
+
+static bool dequeue_toast_internal(ToastMessage* out) {
+    bool result = false;
+    portENTER_CRITICAL(&toastQueueMux);
+    if (toastQueueCount > 0) {
+        *out = toastQueue[toastQueueHead];
+        toastQueueHead = (toastQueueHead + 1) % TOAST_QUEUE_SIZE;
+        toastQueueCount--;
+        result = true;
+    }
+    portEXIT_CRITICAL(&toastQueueMux);
+    return result;
+}
+
+static void process_toast_queue();
+static void show_toast_now(const char* text, uint32_t duration);
+
+static void start_dismiss_anim(lv_obj_t* obj) {
+    if (!lv_obj_is_valid(obj)) return;
+    lv_anim_t a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, obj);
+    lv_anim_set_values(&a, lv_obj_get_y(obj),
+        lv_disp_get_ver_res(NULL) + lv_obj_get_height(obj));
+    lv_anim_set_duration(&a, 200);
+    lv_anim_set_exec_cb(&a, anim_y_cb);
+    lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
+    lv_anim_set_completed_cb(&a, [](lv_anim_t* a) {
+        lv_obj_t* o = (lv_obj_t*)a->var;
+        if (lv_obj_is_valid(o)) lv_obj_delete(o);
+        });
+    lv_anim_start(&a);
+}
+
+void toast_timer_cb(lv_timer_t* timer) {
+    start_dismiss_anim(toast_background);
+    lv_timer_delete(toast_timer);
+    toast_timer = NULL;
+    toast_displaying = false;
+    process_toast_queue();
+}
+
+void show_toast(const char* text, uint32_t duration) {
+    enqueue_toast_internal(text, duration);
+}
+
+static void show_toast_now(const char* text, uint32_t duration) {
+    toast_displaying = true;
+
+    // Dismiss existing toast immediately
+    if (lv_obj_is_valid(toast_background))
+        lv_obj_delete(toast_background);
+    if (toast_timer) {
+        lv_timer_delete(toast_timer);
+        toast_timer = NULL;
+    }
+
+    // One-time style init
+    if (!toast_styles_initialized) {
+        lv_style_init(&toast_bg_style);
+        lv_style_set_bg_opa(&toast_bg_style, LV_OPA_70);
+
+        lv_anim_t anim_tmpl;
+        lv_anim_init(&anim_tmpl);
+        lv_anim_set_duration(&anim_tmpl, 500);
+        lv_anim_set_delay(&anim_tmpl, 500);
+        lv_anim_set_repeat_delay(&anim_tmpl, 1000);
+        lv_anim_set_completed_cb(&anim_tmpl, [](lv_anim_t*) {
+            start_dismiss_anim(toast_background);
+            });
+
+        lv_style_init(&toast_label_style);
+        lv_style_set_anim(&toast_label_style, &anim_tmpl);
+        toast_styles_initialized = true;
+    }
+
+    // Create background
+    toast_background = lv_obj_create(lv_layer_top());
+    lv_obj_null_on_delete(&toast_background);
+    lv_obj_add_style(toast_background, &toast_bg_style, 0);
+    lv_obj_set_size(toast_background, LV_PCT(90), LV_SIZE_CONTENT);
+    lv_obj_clear_flag(toast_background, LV_OBJ_FLAG_SCROLL_CHAIN_VER);
+    lv_obj_update_layout(toast_background);
+    lv_obj_align(toast_background, LV_ALIGN_BOTTOM_MID, 0, -20);
+
+    lv_obj_add_event_cb(toast_background, [](lv_event_t* e) {
+        if (toast_timer) {
+            lv_timer_delete(toast_timer);
+            toast_timer = NULL;
+        }
+        start_dismiss_anim(toast_background);
+        toast_displaying = false;
+        process_toast_queue();
+        }, LV_EVENT_CLICKED, NULL);
+
+    // Label
+    lv_obj_t* label = lv_label_create(toast_background);
+    lv_obj_set_width(label, LV_PCT(100));
+    lv_label_set_long_mode(label, LV_LABEL_LONG_MODE_SCROLL_CIRCULAR);
+    lv_label_set_text(label, text);
+    lv_obj_set_style_text_font(label, &lv_font_montserrat_14, 0);
+    lv_obj_add_style(label, &toast_label_style, LV_STATE_DEFAULT);
+    lv_obj_center(label);
+
+    // Slide-in animation
+    int32_t start_y = lv_disp_get_ver_res(NULL);
+    lv_obj_set_y(toast_background, start_y);
+    lv_anim_t a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, toast_background);
+    lv_anim_set_values(&a, start_y, -20);
+    lv_anim_set_duration(&a, 300);
+    lv_anim_set_exec_cb(&a, anim_y_cb);
+    lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
+    lv_anim_start(&a);
+
+    toast_timer = lv_timer_create(toast_timer_cb, duration, NULL);
+}
+
+static void process_toast_queue() {
+    if (toast_displaying) return;
+    ToastMessage msg;
+    if (dequeue_toast_internal(&msg)) {
+        show_toast_now(msg.text, msg.duration);
+    }
 }
 
 void update_homeScreen(DateTime now)

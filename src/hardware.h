@@ -4,10 +4,18 @@
 #define TFT_WIDTH 240
 #define TFT_HEIGHT 240
 
-TFT_eSPI *tft = nullptr;
+//TFT_eSPI *tft = nullptr; //not used since lvgl initializes tft_espi
 #define DRAW_BUF_SIZE (TFT_WIDTH * TFT_HEIGHT / 10 * (LV_COLOR_DEPTH / 8))
 uint32_t draw_buf[DRAW_BUF_SIZE / 2];
 #define TFT_ROTATION LV_DISPLAY_ROTATION_180
+
+void display_change_brightness(int brightness)
+{
+    // map brightness from 1-100 to 0-255
+    int mappedBrightness = map(brightness, 0, 100, 1, 255);
+    analogWrite(TFT_BACKLIGHT, mappedBrightness);
+    ESP_LOGI("Display", "Brightness changed to %i%%", brightness);
+}   
 
 // Touch stuff
 
@@ -87,7 +95,9 @@ void lvgl_log_cb(lv_log_level_t level, const char *buf)
 }
 
 // AXP stuff
+
 AXP20X_Class *power;
+
 void init_power()
 {
     power = new AXP20X_Class();
@@ -148,7 +158,9 @@ void init_rtc()
     rtc.start();
 }
 /* Make sure the library https://github.com/pschatzmann/arduino-audio-tools.git is in the ini
+
 // Audio stuff
+
 I2SStream i2s;
 
 void init_audio()
@@ -173,14 +185,13 @@ void init_audio()
 void hardware_init()
 {
     init_power();
-    // start up the lcd
+    // start up the lcd backlight
     pinMode(TFT_BACKLIGHT, OUTPUT);
-    tft = new TFT_eSPI();
-    tft->init();
+    // tft_espi not initialized because lvgl does it
     // start up everything else like the sensors
     init_touchpad();
     init_rtc();
-    // init_audio();
+    // init_audio(); //haven't figured this out yet
 }
 
 /* Init LVGL */

@@ -31,7 +31,7 @@
 #include <lvgl.h>
 void UI_set_wifi_enabled(bool enabled);
 void UI_set_sound_enabled(bool enabled) { LV_LOG_USER("Ui change"); }
-void UI_change_brightness(int brightness) { LV_LOG_USER("Ui change"); }
+void UI_change_brightness(int brightness);
 void UI_set_display_timeout(int seconds) { LV_LOG_USER("Ui change"); }
 void UI_change_volume(int volume) { LV_LOG_USER("Ui change"); }
 void UI_start_wifi_scan() { LV_LOG_USER("Ui change"); }
