@@ -1,21 +1,25 @@
+#include "esp_sleep.h"
+
 // Screen stuff
 
 // to shut the errors up
 #define TFT_WIDTH 240
 #define TFT_HEIGHT 240
 
-//TFT_eSPI *tft = nullptr; //not used since lvgl initializes tft_espi
+// TFT_eSPI *tft = nullptr; //not used since lvgl initializes tft_espi
 #define DRAW_BUF_SIZE (TFT_WIDTH * TFT_HEIGHT / 10 * (LV_COLOR_DEPTH / 8))
 uint32_t draw_buf[DRAW_BUF_SIZE / 2];
 #define TFT_ROTATION LV_DISPLAY_ROTATION_180
 
+int currentBrightness = 100;
+
 void display_change_brightness(int brightness)
 {
-    // map brightness from 1-100 to 0-255
+    currentBrightness = brightness;
     int mappedBrightness = map(brightness, 0, 100, 1, 255);
     analogWrite(TFT_BACKLIGHT, mappedBrightness);
     ESP_LOGI("Display", "Brightness changed to %i%%", brightness);
-}   
+}
 
 // Touch stuff
 
@@ -38,15 +42,20 @@ void init_touchpad()
 
 // LVGL Stuff
 
+uint32_t lastActivityMillis = 0;
+bool screenDimmed = false; // true while showing the pre-sleep dim warning
+
 void hardware_touchpad_read(lv_indev_t *indev, lv_indev_data_t *data)
 {
     uint16_t x, y;
     bool touched = touch->getTouched();
     touch->getPoint(x, y);
-    if(x > 240 || x < 0){
+    if (x > 240 || x < 0)
+    {
         return;
     }
-    if(y > 240 || y < 0){
+    if (y > 240 || y < 0)
+    {
         return;
     }
 
@@ -56,6 +65,12 @@ void hardware_touchpad_read(lv_indev_t *indev, lv_indev_data_t *data)
     }
     else
     {
+        lastActivityMillis = millis();
+        if (screenDimmed)
+        {
+            screenDimmed = false;
+            display_change_brightness(lv_slider_get_value(controlPanel_brightnessSlider));
+        }
         data->state = LV_INDEV_STATE_PRESSED;
 
         // data->point.x = x;
@@ -97,6 +112,7 @@ void lvgl_log_cb(lv_log_level_t level, const char *buf)
 // AXP stuff
 
 AXP20X_Class *power;
+bool axp_irq = false;
 
 void init_power()
 {
@@ -123,7 +139,7 @@ void init_power()
 
     // do some IRQ Stuff for checking button and usb and stuff
     pinMode(AXP202_INTERUPT, INPUT_PULLUP);
-    power->enableIRQ(AXP202_PEK_SHORTPRESS_IRQ, true);
+    power->enableIRQ(AXP202_PEK_SHORTPRESS_IRQ | AXP202_CHARGING_IRQ, true);
     power->clearIRQ();
     // for monitoring
     power->adc1Enable(
@@ -157,11 +173,69 @@ void init_rtc()
     }
     rtc.start();
 }
-/* Make sure the library https://github.com/pschatzmann/arduino-audio-tools.git is in the ini
+
+// Screen timeout
+
+int screenTimeoutSeconds = 0; // 0 = never
+
+// Light sleep
+
+void enter_light_sleep()
+{
+    int savedBrightness = lv_slider_get_value(controlPanel_brightnessSlider);
+
+    // disconnect WiFi before sleeping to save power; remember state so we can restore it
+    bool wifiWasConnected = (WiFi.status() == WL_CONNECTED);
+    if (wifiWasConnected)
+        WiFi.disconnect(true);
+
+    // dim the screen down to off, starting from wherever it actually is (may already be pre-dimmed)
+    for (int b = currentBrightness; b >= 0; b -= 4)
+    {
+        display_change_brightness(b);
+        delay(8);
+    }
+    analogWrite(TFT_BACKLIGHT, 0);                  // display_change_brightness floors at 1/255, force fully off
+    power->setPowerOutPut(AXP202_LDO2, AXP202_OFF); // cut the backlight rail to save power
+
+    // clear any pending button IRQ so we don't wake immediately
+    power->readIRQ();
+    power->clearIRQ();
+
+    // wake when the side button is pressed again (AXP202 IRQ line is active low)
+    esp_sleep_enable_ext0_wakeup((gpio_num_t)AXP202_INTERUPT, 0);
+    esp_light_sleep_start();
+
+    // ---- execution resumes here once woken ----
+    power->setPowerOutPut(AXP202_LDO2, AXP202_ON);
+    delay(20); // let the backlight rail stabilize
+
+    for (int b = 0; b <= savedBrightness; b += 4)
+    {
+        display_change_brightness(b);
+        delay(8);
+    }
+    display_change_brightness(savedBrightness); // land exactly on the original value (step may overshoot/undershoot)
+
+    // reconnect WiFi if it was connected before sleep (uses saved credentials from last WiFi.begin())
+    if (wifiWasConnected)
+        WiFi.begin();
+    WiFi.setTxPower(WIFI_POWER_19_5dBm);
+
+    // clear the IRQ that woke us so the main loop doesn't treat it as another button press
+    power->readIRQ();
+    power->clearIRQ();
+    lastActivityMillis = millis(); // reset timeout so we don't immediately sleep again
+    screenDimmed = false;
+}
+
+// Make sure the library https://github.com/pschatzmann/arduino-audio-tools.git is in the ini
 
 // Audio stuff
-
 I2SStream i2s;
+
+MemoryStream charging_wav(charging, sizeof(charging));
+EncodedAudioStream out(&i2s, new WAVDecoder());
 
 void init_audio()
 {
@@ -173,13 +247,41 @@ void init_audio()
     config.sample_rate = 48000;
     config.channels = 1;
 
-    // turn on the amp
-    power->setPowerOutPut(AXP202_LDO4, true);
+    // to turn on the amp:
+    // power->setPowerOutPut(AXP202_LDO4, true);
 
     // start
     i2s.begin(config);
 }
-*/
+
+
+void play_audio_task(void *pvParam)
+{
+    MemoryStream audio = *(MemoryStream *)pvParam;
+    StreamCopy copier(out, audio);
+    out.begin();
+    while (audio)
+    {
+        copier.copy();
+    }
+    vTaskDelete(NULL);
+}
+
+void play_charging()
+{
+    xTaskCreate(play_audio_task, "Play Audio", 4096, &charging_wav, 0, NULL);
+}
+void set_audio(bool enabled)
+{
+    if (enabled)
+    {
+        power->setPowerOutPut(AXP202_LDO4, true);
+    }
+    else
+    {
+        power->setPowerOutPut(AXP202_LDO4, false);
+    }
+}
 
 /* Init hardware */
 void hardware_init()
@@ -191,7 +293,11 @@ void hardware_init()
     // start up everything else like the sensors
     init_touchpad();
     init_rtc();
-    // init_audio(); //haven't figured this out yet
+    init_audio();
+
+    // for checking if charging and button presses
+    attachInterrupt(AXP202_INTERUPT, []
+                    { axp_irq = true; }, FALLING);
 }
 
 /* Init LVGL */

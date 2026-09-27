@@ -29,17 +29,23 @@
 #include "focaltech.h"
 #include "RTClib.h"
 #include <lvgl.h>
+#include <Preferences.h>
+const char* timezone = "EST5EDT,M3.2.0/2,M11.1.0/2"; // America, New York
+Preferences prefs;
 void UI_set_wifi_enabled(bool enabled);
-void UI_set_sound_enabled(bool enabled) { LV_LOG_USER("Ui change"); }
+void UI_set_sound_enabled(bool enabled);
 void UI_change_brightness(int brightness);
-void UI_set_display_timeout(int seconds) { LV_LOG_USER("Ui change"); }
-void UI_change_volume(int volume) { LV_LOG_USER("Ui change"); }
-void UI_start_wifi_scan() { LV_LOG_USER("Ui change"); }
-void UI_set_time(int hour, int minute) { LV_LOG_USER("Ui change"); }
-void UI_set_date(int year, int month, int day) { LV_LOG_USER("Ui change"); }
-void UI_sync_time_and_date_from_ntp() { LV_LOG_USER("Ui change"); }
+void UI_set_display_timeout(int seconds);
+void UI_change_volume(int volume);
+void UI_start_wifi_scan();
+void UI_populate_wifi_list();
+void UI_set_time(int hour, int minute);
+void UI_set_date(int year, int month, int day);
+void UI_sync_time_and_date_from_ntp();
 void UI_check_for_software_updates() { LV_LOG_USER("Ui change"); }
 void UI_start_software_update() { LV_LOG_USER("Ui change"); }
 #include "lvgl_screens.h"
-//#include "AudioTools.h"
+#include "AudioTools.h"
+
+#include "charging.h"
 
